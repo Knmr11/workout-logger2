@@ -9,10 +9,7 @@
 <title>筋トレ記録</title>
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-:root{
-  --bg:#f4f6f8;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;
-  --blue:#0b6ef3;--danger:#b42318;
-}
+:root{--bg:#f4f6f8;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#0b6ef3;--danger:#b42318;--green:#067647}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);padding-bottom:92px}
 header{position:sticky;top:0;z-index:5;background:rgba(244,246,248,.95);backdrop-filter:blur(10px);padding:calc(env(safe-area-inset-top) + 14px) 16px 10px;border-bottom:1px solid var(--line)}
@@ -31,22 +28,20 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
 .setrow{display:grid;grid-template-columns:46px 1fr 1fr 54px;gap:8px;align-items:center;margin:8px 0}
 .setno{text-align:center;font-weight:700}
 .smallbtn{padding:10px 8px;font-size:14px;border-radius:10px}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(5,1fr);background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
 .tab{background:transparent;color:#64748b;padding:8px 4px;font-size:12px;font-weight:700}
 .tab.active{color:var(--blue);background:#eff6ff}
-.view{display:none}.view.active{display:block}
-.history-item{padding:12px 0;border-bottom:1px solid #eee}
-.history-item:last-child{border-bottom:0}
-.history-title{font-weight:700}
-.meta{color:var(--muted);font-size:13px;margin-top:4px}
-.exercise-item{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #eee}
-.exercise-item span{flex:1}
-.note{font-size:13px;color:var(--muted);line-height:1.5}
-.empty{color:var(--muted);text-align:center;padding:24px 8px}
-.inline-note{font-size:12px;color:var(--muted);margin-top:6px}
-.summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.view{display:none} .view.active{display:block}
+.history-item{padding:12px 0;border-bottom:1px solid #eee} .history-item:last-child{border-bottom:0}
+.history-title{font-weight:700} .meta{color:var(--muted);font-size:13px;margin-top:4px}
+.exercise-item{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #eee} .exercise-item span{flex:1}
+.note{font-size:13px;color:var(--muted);line-height:1.5} .empty{color:var(--muted);text-align:center;padding:24px 8px}
+.inline-note{font-size:12px;color:var(--muted);margin-top:6px} .summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .pill{background:#eef2f7;border-radius:999px;padding:6px 10px;font-size:12px}
-@media (max-width:420px){.setrow{grid-template-columns:40px 1fr 1fr 50px}}
+.status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700;background:#eef2f7;color:#475569}
+.status.ok{background:#ecfdf3;color:var(--green)} .status.warn{background:#fff7ed;color:#9a3412}
+.auth-grid{display:grid;gap:10px}
+@media(max-width:420px){.setrow{grid-template-columns:40px 1fr 1fr 50px}}
 </style>
 </head>
 <body>
@@ -54,6 +49,31 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
 
 <main>
 <section id="record" class="view active">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div class="label" style="margin:0">クラウド同期</div>
+      <span id="syncStatus" class="status warn">未ログイン</span>
+    </div>
+    <div id="authLoggedOut" style="margin-top:10px">
+      <div class="auth-grid">
+        <input id="authEmail" type="email" autocomplete="email" placeholder="メールアドレス">
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）">
+        <div class="grid2">
+          <button id="loginBtn">ログイン</button>
+          <button id="signupBtn" class="secondary">新規登録</button>
+        </div>
+      </div>
+      <div class="inline-note">ログインすると、種目・並び順・保存メニュー・筋トレ履歴・体重・体脂肪率をiPhone/PC間で同期します。</div>
+    </div>
+    <div id="authLoggedIn" style="display:none;margin-top:10px">
+      <div id="authUserEmail" class="prev"></div>
+      <div style="height:10px"></div>
+      <button id="syncNowBtn" class="secondary big">今すぐ同期</button>
+      <div style="height:8px"></div>
+      <button id="logoutBtn" class="danger big">ログアウト</button>
+    </div>
+  </div>
+
   <div class="card" id="weeklyExportCard" style="display:none">
     <div class="label">週次CSV</div>
     <div id="weeklyExportMessage" class="prev"></div>
@@ -62,15 +82,12 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
     <div style="height:8px"></div>
     <button id="weeklyExportDismiss" class="secondary big">今回は後で</button>
   </div>
+
   <div class="card">
     <div class="label">今日の体重・体脂肪率（任意）</div>
     <div class="grid2">
-      <div>
-        <input id="bodyWeight" type="number" step="0.1" inputmode="decimal" placeholder="体重 kg">
-      </div>
-      <div>
-        <input id="bodyFat" type="number" step="0.1" inputmode="decimal" placeholder="体脂肪 %">
-      </div>
+      <input id="bodyWeight" type="number" step="0.1" inputmode="decimal" placeholder="体重 kg">
+      <input id="bodyFat" type="number" step="0.1" inputmode="decimal" placeholder="体脂肪 %">
     </div>
     <div class="inline-note">入力しない日は空欄のままでOKです。</div>
     <div style="height:10px"></div>
@@ -101,10 +118,7 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
 </section>
 
 <section id="history" class="view">
-  <div class="card">
-    <div class="label">履歴</div>
-    <div id="historyList"></div>
-  </div>
+  <div class="card"><div class="label">履歴</div><div id="historyList"></div></div>
 </section>
 
 <section id="exercises" class="view">
@@ -113,25 +127,35 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
     <input id="newExercise" placeholder="例：ベンチプレス">
     <div style="height:10px"></div>
     <button id="addExercise" class="big">種目を追加</button>
+    <div class="inline-note">ログイン中は追加・並び替え・削除が全端末に同期されます。</div>
   </div>
+  <div class="card"><div class="label">登録済み種目</div><div id="exerciseList"></div></div>
+</section>
+
+<section id="menus" class="view">
   <div class="card">
-    <div class="label">登録済み種目</div>
-    <div id="exerciseList"></div>
+    <div class="label">筋トレメニューを作成</div>
+    <input id="menuName" placeholder="例：胸の日">
+    <div style="height:10px"></div>
+    <div class="label">種目を選択</div>
+    <div id="menuExerciseChoices"></div>
+    <div style="height:12px"></div>
+    <button id="saveMenu" class="big">メニューを保存</button>
   </div>
+  <div class="card"><div class="label">保存済みメニュー</div><div id="savedMenus"></div></div>
 </section>
 
 <section id="export" class="view">
   <div class="card">
     <div class="label">CSV出力</div>
-    <p class="note">
-      1セットを1行として、日付・体重・体脂肪率・種目・セット番号・重量・回数を書き出します。
-      ExcelやChatGPTで分析しやすい形式です。
-    </p>
+    <p class="note">1セットを1行として、日付・体重・体脂肪率・種目・セット番号・重量・回数を書き出します。</p>
     <button id="exportCsv" class="big">CSVを出力</button>
+    <div id="csvSaveInfo" class="prev" style="display:none;margin-top:12px"></div>
   </div>
   <div class="card">
     <div class="label">データ管理</div>
-    <button id="clearAll" class="danger big">全記録を削除</button>
+    <button id="clearAll" class="danger big">記録・体組成を全削除</button>
+    <div class="inline-note">ログイン中は筋トレ履歴・体重・体脂肪率をクラウドから削除します。種目・保存メニューは削除しません。</div>
   </div>
 </section>
 </main>
@@ -140,287 +164,460 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
   <button class="tab active" data-view="record">記録</button>
   <button class="tab" data-view="history">履歴</button>
   <button class="tab" data-view="exercises">種目</button>
+  <button class="tab" data-view="menus">メニュー</button>
   <button class="tab" data-view="export">CSV</button>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL="https://fxbfgbjyomttenjkyrln.supabase.co";
+const SUPABASE_KEY="sb_publishable_Ijat8PxwSSVo9DzxjDI-Hw_nXYP1mEy";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 const KEYS={
-  ex:"workout_exercises_v2",
-  logs:"workout_logs_v2",
-  body:"workout_body_v2",
-  weekly:"workout_weekly_exports_v1"
+  ex:"workout_exercises_v2", logs:"workout_logs_v2", body:"workout_body_v2",
+  weekly:"workout_weekly_exports_v1", menus:"workout_saved_menus_v1"
 };
-const defaultExercises=[
-  "ベンチプレス","インクラインダンベルプレス","ダンベルフライ",
-  "ラットプルダウン","シーテッドロー","ショルダープレス",
-  "スクワット","レッグプレス","アームカール","トライセプスプレスダウン"
-];
+const defaultExercises=["ベンチプレス","インクラインダンベルプレス","ダンベルフライ","ラットプルダウン","シーテッドロー","ショルダープレス","スクワット","レッグプレス","アームカール","トライセプスプレスダウン"];
 
 let exercises=JSON.parse(localStorage.getItem(KEYS.ex)||"null")||defaultExercises;
 let logs=JSON.parse(localStorage.getItem(KEYS.logs)||"[]");
 let body=JSON.parse(localStorage.getItem(KEYS.body)||"{}");
-let currentSets=[];
 let weeklyExports=JSON.parse(localStorage.getItem(KEYS.weekly)||"{}");
+let savedMenus=JSON.parse(localStorage.getItem(KEYS.menus)||"[]");
+let currentSets=[{weight:20,reps:10},{weight:20,reps:10},{weight:20,reps:10}];
+let currentUser=null;
+let cloudExerciseRows=[];
+let cloudMenuRows=[];
+let cloudWorkoutRows=[];
+let cloudBodyRows=[];
 
 const $=id=>document.getElementById(id);
-const todayStr=()=>new Date().toISOString().slice(0,10);
-function save(){
+const todayStr=()=>localDateStr(new Date());
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function saveLocal(){
   localStorage.setItem(KEYS.ex,JSON.stringify(exercises));
   localStorage.setItem(KEYS.logs,JSON.stringify(logs));
   localStorage.setItem(KEYS.body,JSON.stringify(body));
   localStorage.setItem(KEYS.weekly,JSON.stringify(weeklyExports));
+  localStorage.setItem(KEYS.menus,JSON.stringify(savedMenus));
 }
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
-function makeOptions(start,end,step,suffix){
-  let arr=[];
-  for(let x=start;x<=end+1e-9;x+=step){
-    let v=Math.round(x*10)/10;
-    arr.push(`<option value="${v}">${v}${suffix}</option>`);
+function setSyncStatus(text,ok=false){const s=$("syncStatus");s.textContent=text;s.className="status "+(ok?"ok":"warn");}
+function localDateStr(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function weekSunday(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-x.getDay());return x;}
+function weekSaturday(d){const s=weekSunday(d),e=new Date(s);e.setDate(e.getDate()+6);return e;}
+function makeOptions(start,end,step,suffix){let a=[];for(let x=start;x<=end+1e-9;x+=step){const v=Math.round(x*10)/10;a.push(`<option value="${v}">${v}${suffix}</option>`);}return a.join("");}
+
+async function ensureAuthUI(){
+  if(currentUser){
+    $("authLoggedOut").style.display="none"; $("authLoggedIn").style.display="block";
+    $("authUserEmail").innerHTML=`<strong>ログイン中</strong><br>${esc(currentUser.email||"")}`;
+    setSyncStatus("同期中",true);
+  }else{
+    $("authLoggedOut").style.display="block"; $("authLoggedIn").style.display="none";
+    setSyncStatus("未ログイン",false);
   }
-  return arr.join("");
 }
 
-function localDateStr(d){
-  const y=d.getFullYear();
-  const m=String(d.getMonth()+1).padStart(2,"0");
-  const day=String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${day}`;
+async function signUp(){
+  const email=$("authEmail").value.trim(), password=$("authPassword").value;
+  if(!email||password.length<6){alert("メールアドレスと6文字以上のパスワードを入力してください");return;}
+  const {data,error}=await db.auth.signUp({email,password});
+  if(error){alert("新規登録エラー: "+error.message);return;}
+  alert(data.session ? "登録してログインしました" : "確認メールを送信しました。メール内のリンクを開いてからログインしてください。");
 }
-function weekSunday(d){
-  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  x.setDate(x.getDate()-x.getDay()); // Sunday = start
-  return x;
+async function login(){
+  const email=$("authEmail").value.trim(), password=$("authPassword").value;
+  const {error}=await db.auth.signInWithPassword({email,password});
+  if(error)alert("ログインエラー: "+error.message);
 }
-function weekSaturday(d){
-  const s=weekSunday(d);
-  const e=new Date(s);
-  e.setDate(e.getDate()+6);
-  return e;
+async function logout(){await db.auth.signOut();}
+
+async function migrateLocalIfCloudEmpty(){
+  if(!currentUser)return;
+  const {data:existing,error}=await db.from("exercises").select("id").eq("user_id",currentUser.id).limit(1);
+  if(error)throw error;
+  if(existing && existing.length)return;
+
+  if(exercises.length){
+    const rows=exercises.map((name,i)=>({user_id:currentUser.id,name,sort_order:i}));
+    const {data:inserted,error:ie}=await db.from("exercises").insert(rows).select("id,name,sort_order");
+    if(ie)throw ie;
+
+    // migrate local menus by matching exercise names to inserted ids
+    if(savedMenus.length && inserted){
+      const idByName=Object.fromEntries(inserted.map(r=>[r.name,r.id]));
+      const menuRows=savedMenus.map(m=>({
+        user_id:currentUser.id,
+        name:m.name,
+        exercise_ids:(m.exercises||[]).map(n=>idByName[n]).filter(Boolean)
+      }));
+      if(menuRows.length){
+        const {error:me}=await db.from("workout_menus").insert(menuRows);
+        if(me)throw me;
+      }
+    }
+  }
+}
+
+async function migrateLocalWorkoutDataIfCloudEmpty(){
+  if(!currentUser)return;
+
+  const [logCheck, bodyCheck] = await Promise.all([
+    db.from("workout_logs").select("id").eq("user_id",currentUser.id).limit(1),
+    db.from("body_metrics").select("id").eq("user_id",currentUser.id).limit(1)
+  ]);
+  if(logCheck.error)throw logCheck.error;
+  if(bodyCheck.error)throw bodyCheck.error;
+
+  if((!logCheck.data || !logCheck.data.length) && logs.length){
+    const rows = logs.map(x=>({
+      user_id: currentUser.id,
+      workout_date: x.date,
+      workout_time: x.time || null,
+      exercise_name: x.exercise,
+      sets: x.sets
+    }));
+    const {error} = await db.from("workout_logs").insert(rows);
+    if(error)throw error;
+  }
+
+  if((!bodyCheck.data || !bodyCheck.data.length) && Object.keys(body).length){
+    const rows = Object.entries(body).map(([date,v])=>({
+      user_id: currentUser.id,
+      metric_date: date,
+      weight_kg: v?.weight==="" || v?.weight==null ? null : Number(v.weight),
+      body_fat_pct: v?.bodyFat==="" || v?.bodyFat==null ? null : Number(v.bodyFat)
+    })).filter(r=>r.weight_kg!==null || r.body_fat_pct!==null);
+    if(rows.length){
+      const {error} = await db.from("body_metrics").upsert(rows,{onConflict:"user_id,metric_date"});
+      if(error)throw error;
+    }
+  }
+}
+
+async function loadCloudState(){
+  if(!currentUser)return;
+  setSyncStatus("同期中",true);
+  try{
+    await migrateLocalIfCloudEmpty();
+    await migrateLocalWorkoutDataIfCloudEmpty();
+
+    const [exRes,menuRes,logRes,bodyRes]=await Promise.all([
+      db.from("exercises").select("id,name,sort_order").eq("user_id",currentUser.id).order("sort_order",{ascending:true}),
+      db.from("workout_menus").select("id,name,exercise_ids,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:true}),
+      db.from("workout_logs").select("id,workout_date,workout_time,exercise_name,sets,created_at").eq("user_id",currentUser.id).order("workout_date",{ascending:true}).order("created_at",{ascending:true}),
+      db.from("body_metrics").select("id,metric_date,weight_kg,body_fat_pct").eq("user_id",currentUser.id).order("metric_date",{ascending:true})
+    ]);
+
+    if(exRes.error)throw exRes.error;
+    if(menuRes.error)throw menuRes.error;
+    if(logRes.error)throw logRes.error;
+    if(bodyRes.error)throw bodyRes.error;
+
+    cloudExerciseRows=exRes.data||[];
+    cloudMenuRows=menuRes.data||[];
+    cloudWorkoutRows=logRes.data||[];
+    cloudBodyRows=bodyRes.data||[];
+
+    exercises=cloudExerciseRows.map(r=>r.name);
+    const nameById=Object.fromEntries(cloudExerciseRows.map(r=>[r.id,r.name]));
+    savedMenus=cloudMenuRows.map(r=>({
+      id:r.id,
+      name:r.name,
+      exerciseIds:r.exercise_ids||[],
+      exercises:(r.exercise_ids||[]).map(id=>nameById[id]).filter(Boolean)
+    }));
+
+    logs=cloudWorkoutRows.map(r=>({
+      id:r.id,
+      date:r.workout_date,
+      time:r.workout_time||"",
+      exercise:r.exercise_name,
+      sets:Array.isArray(r.sets)?r.sets:[]
+    }));
+
+    body={};
+    cloudBodyRows.forEach(r=>{
+      body[r.metric_date]={
+        id:r.id,
+        weight:r.weight_kg ?? "",
+        bodyFat:r.body_fat_pct ?? ""
+      };
+    });
+
+    saveLocal();
+    renderExercises();
+    renderMenuChoices();
+    renderSavedMenus();
+    loadTodayBody();
+    renderToday();
+    renderHistory();
+    checkWeeklyExport();
+    setSyncStatus("同期済み",true);
+  }catch(e){
+    console.error(e);
+    setSyncStatus("同期エラー",false);
+    alert("クラウド同期エラー: "+e.message);
+  }
+}
+
+async function addExerciseCloud(name){
+  const sort_order=cloudExerciseRows.length;
+  const {error}=await db.from("exercises").insert({user_id:currentUser.id,name,sort_order});
+  if(error)throw error;
+}
+async function reorderCloud(){
+  const updates=cloudExerciseRows.map((r,i)=>db.from("exercises").update({sort_order:i}).eq("id",r.id).eq("user_id",currentUser.id));
+  const results=await Promise.all(updates);
+  const bad=results.find(r=>r.error); if(bad)throw bad.error;
+}
+async function deleteExerciseCloud(id){
+  const {error}=await db.from("exercises").delete().eq("id",id).eq("user_id",currentUser.id);
+  if(error)throw error;
+  // Remove deleted id from saved menus
+  for(const m of cloudMenuRows){
+    if((m.exercise_ids||[]).includes(id)){
+      const ids=(m.exercise_ids||[]).filter(x=>x!==id);
+      const {error:me}=await db.from("workout_menus").update({exercise_ids:ids}).eq("id",m.id).eq("user_id",currentUser.id);
+      if(me)throw me;
+    }
+  }
+}
+
+
+async function saveWorkoutCloud(log){
+  const payload={
+    user_id:currentUser.id,
+    workout_date:log.date,
+    workout_time:log.time||null,
+    exercise_name:log.exercise,
+    sets:log.sets
+  };
+  const {error}=await db.from("workout_logs").insert(payload);
+  if(error)throw error;
+}
+
+async function saveBodyCloud(date,weight,bodyFat){
+  if(weight==="" && bodyFat===""){
+    const {error}=await db.from("body_metrics").delete().eq("user_id",currentUser.id).eq("metric_date",date);
+    if(error)throw error;
+    return;
+  }
+  const payload={
+    user_id:currentUser.id,
+    metric_date:date,
+    weight_kg:weight===""?null:Number(weight),
+    body_fat_pct:bodyFat===""?null:Number(bodyFat)
+  };
+  const {error}=await db.from("body_metrics").upsert(payload,{onConflict:"user_id,metric_date"});
+  if(error)throw error;
+}
+
+function showCsvSaveInfo(filename){
+  const info=$("csvSaveInfo"); if(!info)return;
+  info.style.display="block";
+  info.innerHTML=`<strong>${esc(filename)}</strong><br>CSVを出力しました。iPhoneでは通常「ファイル」アプリの「ダウンロード」に保存されます。<br>保存先は「設定 → Safari → ダウンロード」で確認できます。`;
 }
 function makeCsvRows(start,end){
-  const s=localDateStr(start), e=localDateStr(end);
-  const rows=[["date","body_weight_kg","body_fat_pct","exercise","set_no","training_weight_kg","reps"]];
-  logs.filter(x=>x.date>=s&&x.date<=e).forEach(log=>{
-    const bd=body[log.date]||{};
-    log.sets.forEach((set,i)=>rows.push([
-      log.date, bd.weight??"", bd.bodyFat??"", log.exercise, i+1, set.weight, set.reps
-    ]));
-  });
+  const s=localDateStr(start),e=localDateStr(end),rows=[["date","body_weight_kg","body_fat_pct","exercise","set_no","training_weight_kg","reps"]];
+  logs.filter(x=>x.date>=s&&x.date<=e).forEach(log=>{const bd=body[log.date]||{};log.sets.forEach((set,i)=>rows.push([log.date,bd.weight??"",bd.bodyFat??"",log.exercise,i+1,set.weight,set.reps]));});
   return rows;
 }
 function downloadCsv(rows,filename){
   const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download=filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showCsvSaveInfo(filename);
 }
 function exportWeek(start,end){
-  const rows=makeCsvRows(start,end);
-  if(rows.length===1){ alert("この週のトレーニング記録はありません。"); return; }
-  const s=localDateStr(start), e=localDateStr(end);
-  downloadCsv(rows,`workout_${s}_to_${e}.csv`);
-  weeklyExports[`${s}_to_${e}`]={exportedAt:new Date().toISOString()};
-  save();
-  checkWeeklyExport();
+  const rows=makeCsvRows(start,end);if(rows.length===1){alert("この週のトレーニング記録はありません。");return;}
+  const s=localDateStr(start),e=localDateStr(end);downloadCsv(rows,`workout_${s}_to_${e}.csv`);weeklyExports[`${s}_to_${e}`]={exportedAt:new Date().toISOString()};saveLocal();checkWeeklyExport();
 }
 function pendingWeek(){
-  const now=new Date();
-  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const currentStart=weekSunday(today);
-  const currentEnd=weekSaturday(today);
-
+  const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),currentStart=weekSunday(today),currentEnd=weekSaturday(today);
   if(today.getDay()===6){
-    const s=localDateStr(currentStart), e=localDateStr(currentEnd), key=`${s}_to_${e}`;
-    if(logs.some(x=>x.date>=s&&x.date<=e) && !weeklyExports[key]){
-      return {start:currentStart,end:currentEnd,current:true};
-    }
+    const s=localDateStr(currentStart),e=localDateStr(currentEnd),key=`${s}_to_${e}`;
+    if(logs.some(x=>x.date>=s&&x.date<=e)&&!weeklyExports[key])return {start:currentStart,end:currentEnd,current:true};
   }
   for(let i=1;i<=12;i++){
-    const start=new Date(currentStart);
-    start.setDate(start.getDate()-7*i);
-    const end=new Date(start); end.setDate(end.getDate()+5);
-    const s=localDateStr(start), e=localDateStr(end), key=`${s}_to_${e}`;
-    if(logs.some(x=>x.date>=s&&x.date<=e) && !weeklyExports[key]){
-      return {start,end,current:false};
-    }
+    const start=new Date(currentStart);start.setDate(start.getDate()-7*i);
+    const end=new Date(start);end.setDate(end.getDate()+6);
+    const s=localDateStr(start),e=localDateStr(end),key=`${s}_to_${e}`;
+    if(logs.some(x=>x.date>=s&&x.date<=e)&&!weeklyExports[key])return {start,end,current:false};
   }
   return null;
 }
 function checkWeeklyExport(){
-  const p=pendingWeek();
-  const card=$("weeklyExportCard");
-  if(!p){ card.style.display="none"; return; }
-  card.style.display="block";
-  card.dataset.start=localDateStr(p.start);
-  card.dataset.end=localDateStr(p.end);
-  $("weeklyExportMessage").innerHTML=p.current
-    ? `<strong>今日は土曜日です。</strong><br>${localDateStr(p.start)}〜${localDateStr(p.end)} の記録をCSV出力できます。`
-    : `<strong>未出力の週があります。</strong><br>${localDateStr(p.start)}〜${localDateStr(p.end)} の記録をCSV出力できます。`;
+  const p=pendingWeek(),card=$("weeklyExportCard");if(!p){card.style.display="none";return;}
+  card.style.display="block";card.dataset.start=localDateStr(p.start);card.dataset.end=localDateStr(p.end);
+  $("weeklyExportMessage").innerHTML=p.current?`<strong>今日は土曜日です。</strong><br>${localDateStr(p.start)}〜${localDateStr(p.end)} の7日分をCSV出力できます。`:`<strong>未出力の週があります。</strong><br>${localDateStr(p.start)}〜${localDateStr(p.end)} の7日分をCSV出力できます。`;
 }
 
 function renderSetRows(){
   const wrap=$("setRows");
-  wrap.innerHTML=currentSets.map((s,i)=>`
-    <div class="setrow">
-      <div class="setno">${i+1}</div>
-      <select data-kind="weight" data-i="${i}">${makeOptions(0,200,2.5," kg")}</select>
-      <select data-kind="reps" data-i="${i}">${makeOptions(1,30,1," 回")}</select>
-      <button class="danger smallbtn" onclick="removeSet(${i})">×</button>
-    </div>
-  `).join("");
-  currentSets.forEach((s,i)=>{
-    const w=wrap.querySelector(`select[data-kind="weight"][data-i="${i}"]`);
-    const r=wrap.querySelector(`select[data-kind="reps"][data-i="${i}"]`);
-    w.value=String(s.weight); r.value=String(s.reps);
-  });
-  wrap.querySelectorAll("select").forEach(sel=>sel.addEventListener("change",e=>{
-    const i=Number(e.target.dataset.i);
-    currentSets[i][e.target.dataset.kind]=Number(e.target.value);
-  }));
+  wrap.innerHTML=currentSets.map((s,i)=>`<div class="setrow"><div class="setno">${i+1}</div><select data-kind="weight" data-i="${i}">${makeOptions(0,200,2.5," kg")}</select><select data-kind="reps" data-i="${i}">${makeOptions(1,30,1," 回")}</select><button class="danger smallbtn" onclick="removeSet(${i})">×</button></div>`).join("");
+  currentSets.forEach((s,i)=>{wrap.querySelector(`select[data-kind="weight"][data-i="${i}"]`).value=String(s.weight);wrap.querySelector(`select[data-kind="reps"][data-i="${i}"]`).value=String(s.reps);});
+  wrap.querySelectorAll("select").forEach(sel=>sel.addEventListener("change",e=>{const i=Number(e.target.dataset.i);currentSets[i][e.target.dataset.kind]=Number(e.target.value);}));
 }
-window.removeSet=(i)=>{
-  if(currentSets.length<=1)return;
-  currentSets.splice(i,1); renderSetRows();
-}
-function addSet(copyLast=true){
-  const last=currentSets[currentSets.length-1];
-  currentSets.push(copyLast && last ? {...last} : {weight:20,reps:10});
-  renderSetRows();
-}
+window.removeSet=i=>{if(currentSets.length<=1)return;currentSets.splice(i,1);renderSetRows();};
+function addSet(){const last=currentSets.at(-1);currentSets.push(last?{...last}:{weight:20,reps:10});renderSetRows();}
+
 function renderExercises(){
-  const sel=$("exerciseSelect"), current=sel.value;
+  const sel=$("exerciseSelect"),current=sel.value;
   sel.innerHTML='<option value="">種目を選択</option>'+exercises.map(e=>`<option>${esc(e)}</option>`).join("");
   if(exercises.includes(current))sel.value=current;
-  $("exerciseList").innerHTML=exercises.length?exercises.map((e,i)=>`
-    <div class="exercise-item">
-      <span>${esc(e)}</span>
-      <button class="secondary smallbtn" onclick="moveExercise(${i},-1)">↑</button>
-      <button class="secondary smallbtn" onclick="moveExercise(${i},1)">↓</button>
-      <button class="danger smallbtn" onclick="deleteExercise(${i})">削除</button>
-    </div>`).join(""):'<div class="empty">種目がありません</div>';
-  updatePrevious();
+  $("exerciseList").innerHTML=exercises.length?exercises.map((e,i)=>`<div class="exercise-item"><span>${esc(e)}</span><button class="secondary smallbtn" onclick="moveExercise(${i},-1)">↑</button><button class="secondary smallbtn" onclick="moveExercise(${i},1)">↓</button><button class="danger smallbtn" onclick="deleteExercise(${i})">削除</button></div>`).join(""):'<div class="empty">種目がありません</div>';
+  updatePrevious();renderMenuChoices();
 }
-window.moveExercise=(i,d)=>{const j=i+d;if(j<0||j>=exercises.length)return;[exercises[i],exercises[j]]=[exercises[j],exercises[i]];save();renderExercises();}
-window.deleteExercise=(i)=>{if(confirm("この種目を削除しますか？")){exercises.splice(i,1);save();renderExercises();}}
+window.moveExercise=async(i,d)=>{
+  const j=i+d;if(j<0||j>=exercises.length)return;
+  [exercises[i],exercises[j]]=[exercises[j],exercises[i]];
+  if(currentUser){[cloudExerciseRows[i],cloudExerciseRows[j]]=[cloudExerciseRows[j],cloudExerciseRows[i]];try{await reorderCloud();await loadCloudState();}catch(e){alert(e.message);}}
+  else{saveLocal();renderExercises();}
+};
+window.deleteExercise=async i=>{
+  if(!confirm("この種目を削除しますか？"))return;
+  if(currentUser){try{await deleteExerciseCloud(cloudExerciseRows[i].id);await loadCloudState();}catch(e){alert(e.message);}}
+  else{exercises.splice(i,1);saveLocal();renderExercises();}
+};
+
 function updatePrevious(){
-  const ex=$("exerciseSelect").value;
-  if(!ex){$("previous").textContent="種目を選択してください";return;}
+  const ex=$("exerciseSelect").value;if(!ex){$("previous").textContent="種目を選択してください";return;}
   const prev=[...logs].reverse().find(x=>x.exercise===ex);
-  if(!prev){$("previous").textContent="この種目の記録はまだありません";return;}
-  $("previous").innerHTML=`<strong>${esc(prev.date)}</strong><br>`+
-    prev.sets.map((s,i)=>`${i+1}セット目：${s.weight}kg × ${s.reps}回`).join("<br>");
+  $("previous").innerHTML=prev?`<strong>${esc(prev.date)}</strong><br>${prev.sets.map((s,i)=>`${i+1}セット目：${s.weight}kg × ${s.reps}回`).join("<br>")}`:"この種目の記録はまだありません";
 }
-function loadTodayBody(){
-  const d=body[todayStr()];
-  $("bodyWeight").value=d?.weight ?? "";
-  $("bodyFat").value=d?.bodyFat ?? "";
-  $("bodySaved").textContent=d ? "保存済み" : "";
-}
+function loadTodayBody(){const d=body[todayStr()];$("bodyWeight").value=d?.weight??"";$("bodyFat").value=d?.bodyFat??"";$("bodySaved").textContent=d?"保存済み":"";}
 function renderToday(){
-  const today=todayStr();
-  const arr=logs.filter(x=>x.date===today).reverse();
-  const bd=body[today];
-  let top="";
-  if(bd){
-    const parts=[];
-    if(bd.weight!==null && bd.weight!=="")parts.push(`体重 ${bd.weight}kg`);
-    if(bd.bodyFat!==null && bd.bodyFat!=="")parts.push(`体脂肪 ${bd.bodyFat}%`);
-    if(parts.length)top=`<div class="summary">${parts.map(p=>`<span class="pill">${p}</span>`).join("")}</div>`;
-  }
-  $("todayList").innerHTML=top+(arr.length?arr.map(x=>`
-    <div class="history-item">
-      <div class="history-title">${esc(x.exercise)}</div>
-      <div>${x.sets.map((s,i)=>`${i+1}set ${s.weight}kg×${s.reps}`).join(" / ")}</div>
-      <div class="meta">${esc(x.time||"")}</div>
-    </div>`).join(""):'<div class="empty">まだトレーニング記録がありません</div>');
+  const today=todayStr(),arr=logs.filter(x=>x.date===today).reverse(),bd=body[today];let top="";
+  if(bd){const parts=[];if(bd.weight!==""&&bd.weight!=null)parts.push(`体重 ${bd.weight}kg`);if(bd.bodyFat!==""&&bd.bodyFat!=null)parts.push(`体脂肪 ${bd.bodyFat}%`);if(parts.length)top=`<div class="summary">${parts.map(p=>`<span class="pill">${p}</span>`).join("")}</div>`;}
+  $("todayList").innerHTML=top+(arr.length?arr.map(x=>`<div class="history-item"><div class="history-title">${esc(x.exercise)}</div><div>${x.sets.map((s,i)=>`${i+1}set ${s.weight}kg×${s.reps}`).join(" / ")}</div><div class="meta">${esc(x.time||"")}</div></div>`).join(""):'<div class="empty">まだトレーニング記録がありません</div>');
 }
 function renderHistory(){
-  const grouped={};
-  [...logs].reverse().forEach(x=>{(grouped[x.date] ||= []).push(x)});
-  const dates=Object.keys(grouped).sort().reverse();
-  $("historyList").innerHTML=dates.length?dates.map(date=>{
-    const bd=body[date];
-    const btxt=bd ? [bd.weight!==""&&bd.weight!=null?`体重 ${bd.weight}kg`:"",bd.bodyFat!==""&&bd.bodyFat!=null?`体脂肪 ${bd.bodyFat}%`:""].filter(Boolean).join(" / ") : "";
-    return `<div class="history-item">
-      <div class="history-title">${esc(date)}</div>
-      ${btxt?`<div class="meta">${esc(btxt)}</div>`:""}
-      ${grouped[date].map(x=>`<div style="margin-top:8px"><strong>${esc(x.exercise)}</strong><br>${x.sets.map((s,i)=>`${i+1}set ${s.weight}kg×${s.reps}`).join(" / ")}</div>`).join("")}
-    </div>`;
-  }).join(""):'<div class="empty">履歴がありません</div>';
+  const grouped={};[...logs].reverse().forEach(x=>(grouped[x.date]||=[]).push(x));const dates=Object.keys(grouped).sort().reverse();
+  $("historyList").innerHTML=dates.length?dates.map(date=>{const bd=body[date],btxt=bd?[bd.weight!==""&&bd.weight!=null?`体重 ${bd.weight}kg`:"",bd.bodyFat!==""&&bd.bodyFat!=null?`体脂肪 ${bd.bodyFat}%`:""].filter(Boolean).join(" / "):"";return `<div class="history-item"><div class="history-title">${esc(date)}</div>${btxt?`<div class="meta">${esc(btxt)}</div>`:""}${grouped[date].map(x=>`<div style="margin-top:8px"><strong>${esc(x.exercise)}</strong><br>${x.sets.map((s,i)=>`${i+1}set ${s.weight}kg×${s.reps}`).join(" / ")}</div>`).join("")}</div>`;}).join(""):'<div class="empty">履歴がありません</div>';
 }
+
+function renderMenuChoices(){
+  const box=$("menuExerciseChoices");if(!box)return;
+  box.innerHTML=exercises.length?exercises.map((e,i)=>`<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee"><input type="checkbox" class="menuExerciseCheck" data-i="${i}" value="${esc(e)}" style="width:22px;height:22px"><span>${esc(e)}</span></label>`).join(""):'<div class="empty">先に種目を登録してください</div>';
+}
+function renderSavedMenus(){
+  const box=$("savedMenus");if(!box)return;
+  box.innerHTML=savedMenus.length?savedMenus.map((m,i)=>`<div class="history-item"><div class="history-title">${esc(m.name)}</div><div class="meta">${(m.exercises||[]).map(esc).join(" / ")}</div><div style="display:flex;gap:8px;margin-top:10px"><button class="secondary smallbtn" onclick="loadMenu(${i})">呼び出す</button><button class="danger smallbtn" onclick="deleteMenu(${i})">削除</button></div></div>`).join(""):'<div class="empty">保存済みメニューはありません</div>';
+}
+window.loadMenu=i=>{const m=savedMenus[i];if(!m)return;const first=(m.exercises||[])[0];if(first&&exercises.includes(first)){$("exerciseSelect").value=first;updatePrevious();}switchView("record");alert(`「${m.name}」を呼び出しました。\n\n${(m.exercises||[]).join("\n")}`);};
+window.deleteMenu=async i=>{
+  if(!confirm("このメニューを削除しますか？"))return;
+  if(currentUser){try{const id=cloudMenuRows[i]?.id||savedMenus[i]?.id;const {error}=await db.from("workout_menus").delete().eq("id",id).eq("user_id",currentUser.id);if(error)throw error;await loadCloudState();}catch(e){alert(e.message);}}
+  else{savedMenus.splice(i,1);saveLocal();renderSavedMenus();}
+};
+function switchView(name){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===name));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===name));if(name==="history")renderHistory();if(name==="menus"){renderMenuChoices();renderSavedMenus();}}
+
+$("loginBtn").addEventListener("click",login);
+$("signupBtn").addEventListener("click",signUp);
+$("logoutBtn").addEventListener("click",logout);
+$("syncNowBtn").addEventListener("click",loadCloudState);
 $("exerciseSelect").addEventListener("change",updatePrevious);
-$("addSet").addEventListener("click",()=>addSet(true));
-$("addExercise").addEventListener("click",()=>{
-  const v=$("newExercise").value.trim(); if(!v)return;
-  if(exercises.includes(v)){alert("同じ種目が登録されています");return;}
-  exercises.push(v);$("newExercise").value="";save();renderExercises();
+$("addSet").addEventListener("click",addSet);
+
+$("addExercise").addEventListener("click",async()=>{
+  const v=$("newExercise").value.trim();if(!v)return;if(exercises.includes(v)){alert("同じ種目が登録されています");return;}
+  try{
+    if(currentUser){await addExerciseCloud(v);$("newExercise").value="";await loadCloudState();}
+    else{exercises.push(v);$("newExercise").value="";saveLocal();renderExercises();}
+  }catch(e){alert("追加エラー: "+e.message);}
 });
-$("saveBody").addEventListener("click",()=>{
-  const w=$("bodyWeight").value;
-  const f=$("bodyFat").value;
-  if(w==="" && f===""){ delete body[todayStr()]; }
-  else body[todayStr()]={weight:w===""?"":Number(w),bodyFat:f===""?"":Number(f)};
-  save(); $("bodySaved").textContent="保存しました ✓"; renderToday(); renderHistory(); checkWeeklyExport();
+
+$("saveMenu").addEventListener("click",async()=>{
+  const name=$("menuName").value.trim();const checks=[...document.querySelectorAll(".menuExerciseCheck:checked")];
+  if(!name){alert("メニュー名を入力してください");return;}if(!checks.length){alert("種目を1つ以上選んでください");return;}
+  try{
+    if(currentUser){
+      const ids=checks.map(c=>cloudExerciseRows[Number(c.dataset.i)]?.id).filter(Boolean);
+      const {error}=await db.from("workout_menus").insert({user_id:currentUser.id,name,exercise_ids:ids});if(error)throw error;
+      $("menuName").value="";await loadCloudState();
+    }else{
+      const names=checks.map(c=>c.value);savedMenus.push({name,exercises:names});$("menuName").value="";saveLocal();renderSavedMenus();
+    }
+    document.querySelectorAll(".menuExerciseCheck").forEach(x=>x.checked=false);alert("筋トレメニューを保存しました");
+  }catch(e){alert("メニュー保存エラー: "+e.message);}
 });
-$("saveWorkout").addEventListener("click",()=>{
+
+$("saveBody").addEventListener("click",async()=>{
+  const w=$("bodyWeight").value, f=$("bodyFat").value, date=todayStr();
+  try{
+    if(currentUser){
+      await saveBodyCloud(date,w,f);
+      await loadCloudState();
+    }else{
+      if(w===""&&f==="")delete body[date];
+      else body[date]={weight:w===""?"":Number(w),bodyFat:f===""?"":Number(f)};
+      saveLocal();renderToday();renderHistory();checkWeeklyExport();
+    }
+    $("bodySaved").textContent="保存しました ✓";
+  }catch(e){
+    alert("体組成の保存エラー: "+e.message);
+  }
+});
+
+$("saveWorkout").addEventListener("click",async()=>{
   const ex=$("exerciseSelect").value;
   if(!ex){alert("種目を選んでください");return;}
   const now=new Date();
-  logs.push({
+  const log={
     date:todayStr(),
     time:now.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
     exercise:ex,
     sets:currentSets.map(x=>({...x}))
-  });
-  save();renderToday();renderHistory();updatePrevious();checkWeeklyExport();
-  const b=$("saveWorkout"),old=b.textContent;b.textContent="記録しました ✓";setTimeout(()=>b.textContent=old,900);
-});
-$("exportCsv").addEventListener("click",()=>{
-  const rows=[["date","body_weight_kg","body_fat_pct","exercise","set_no","training_weight_kg","reps"]];
-  logs.forEach(log=>{
-    const bd=body[log.date]||{};
-    log.sets.forEach((s,i)=>rows.push([
-      log.date,
-      bd.weight ?? "",
-      bd.bodyFat ?? "",
-      log.exercise,
-      i+1,
-      s.weight,
-      s.reps
-    ]));
-  });
-  const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=`workout_all_${todayStr()}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
-$("weeklyExportButton").addEventListener("click",()=>{
-  const card=$("weeklyExportCard");
-  if(!card.dataset.start)return;
-  exportWeek(new Date(card.dataset.start+"T00:00:00"),new Date(card.dataset.end+"T00:00:00"));
-});
-$("weeklyExportDismiss").addEventListener("click",()=>{
-  $("weeklyExportCard").style.display="none";
-});
-$("clearAll").addEventListener("click",()=>{
-  if(confirm("すべてのトレーニング記録・体重・体脂肪率を削除しますか？")){
-    logs=[];body={};save();renderToday();renderHistory();loadTodayBody();updatePrevious();
+  };
+  try{
+    if(currentUser){
+      await saveWorkoutCloud(log);
+      await loadCloudState();
+    }else{
+      logs.push(log);
+      saveLocal();renderToday();renderHistory();updatePrevious();checkWeeklyExport();
+    }
+    const b=$("saveWorkout"),old=b.textContent;
+    b.textContent="記録しました ✓";
+    setTimeout(()=>b.textContent=old,900);
+  }catch(e){
+    alert("トレーニング記録の保存エラー: "+e.message);
   }
 });
-document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
-  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(btn.dataset.view).classList.add("active");
-  if(btn.dataset.view==="history")renderHistory();
-}));
-currentSets=[{weight:20,reps:10},{weight:20,reps:10},{weight:20,reps:10}];
-renderSetRows();renderExercises();loadTodayBody();renderToday();renderHistory();checkWeeklyExport();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+
+$("weeklyExportButton").addEventListener("click",()=>{const c=$("weeklyExportCard");if(c.dataset.start)exportWeek(new Date(c.dataset.start+"T00:00:00"),new Date(c.dataset.end+"T00:00:00"));});
+$("weeklyExportDismiss").addEventListener("click",()=>{$("weeklyExportCard").style.display="none";});
+$("exportCsv").addEventListener("click",()=>{const rows=[["date","body_weight_kg","body_fat_pct","exercise","set_no","training_weight_kg","reps"]];logs.forEach(log=>{const bd=body[log.date]||{};log.sets.forEach((s,i)=>rows.push([log.date,bd.weight??"",bd.bodyFat??"",log.exercise,i+1,s.weight,s.reps]));});if(rows.length===1){alert("記録がありません。");return;}downloadCsv(rows,`workout_all_${todayStr()}.csv`);});
+$("clearAll").addEventListener("click",async()=>{
+  const msg=currentUser
+    ?"クラウド上を含め、トレーニング記録・体重・体脂肪率をすべて削除しますか？"
+    :"端末内のトレーニング記録・体重・体脂肪率を削除しますか？";
+  if(!confirm(msg))return;
+  try{
+    if(currentUser){
+      const [a,b]=await Promise.all([
+        db.from("workout_logs").delete().eq("user_id",currentUser.id),
+        db.from("body_metrics").delete().eq("user_id",currentUser.id)
+      ]);
+      if(a.error)throw a.error;
+      if(b.error)throw b.error;
+      await loadCloudState();
+    }else{
+      logs=[];body={};weeklyExports={};saveLocal();renderToday();renderHistory();loadTodayBody();updatePrevious();checkWeeklyExport();
+    }
+  }catch(e){
+    alert("削除エラー: "+e.message);
+  }
+});
+
+document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>switchView(btn.dataset.view)));
+
+db.auth.getSession().then(async ({data})=>{currentUser=data.session?.user||null;await ensureAuthUI();if(currentUser)await loadCloudState();});
+db.auth.onAuthStateChange(async(_event,session)=>{currentUser=session?.user||null;await ensureAuthUI();if(currentUser)await loadCloudState();});
+
+renderSetRows();renderExercises();loadTodayBody();renderToday();renderHistory();renderMenuChoices();renderSavedMenus();checkWeeklyExport();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
 </html>
