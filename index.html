@@ -63,7 +63,7 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
           <button id="signupBtn" class="secondary">新規登録</button>
         </div>
       </div>
-      <div class="inline-note">ログインすると、種目・並び順・保存メニュー・筋トレ履歴・体重・体脂肪率をiPhone/PC間で同期します。</div>
+      <div class="inline-note">ログインすると、種目・並び順・保存メニューをiPhone/PC間で同期します。</div>
     </div>
     <div id="authLoggedIn" style="display:none;margin-top:10px">
       <div id="authUserEmail" class="prev"></div>
@@ -154,8 +154,8 @@ button.danger{background:#fff;color:var(--danger);border:1px solid #f0c2bd}
   </div>
   <div class="card">
     <div class="label">データ管理</div>
-    <button id="clearAll" class="danger big">記録・体組成を全削除</button>
-    <div class="inline-note">ログイン中は筋トレ履歴・体重・体脂肪率をクラウドから削除します。種目・保存メニューは削除しません。</div>
+    <button id="clearAll" class="danger big">端末内の記録を全削除</button>
+    <div class="inline-note">種目・保存メニューのクラウドデータは削除しません。</div>
   </div>
 </section>
 </main>
@@ -189,8 +189,6 @@ let currentSets=[{weight:20,reps:10},{weight:20,reps:10},{weight:20,reps:10}];
 let currentUser=null;
 let cloudExerciseRows=[];
 let cloudMenuRows=[];
-let cloudWorkoutRows=[];
-let cloudBodyRows=[];
 
 const $=id=>document.getElementById(id);
 const todayStr=()=>localDateStr(new Date());
@@ -260,105 +258,27 @@ async function migrateLocalIfCloudEmpty(){
   }
 }
 
-async function migrateLocalWorkoutDataIfCloudEmpty(){
-  if(!currentUser)return;
-
-  const [logCheck, bodyCheck] = await Promise.all([
-    db.from("workout_logs").select("id").eq("user_id",currentUser.id).limit(1),
-    db.from("body_metrics").select("id").eq("user_id",currentUser.id).limit(1)
-  ]);
-  if(logCheck.error)throw logCheck.error;
-  if(bodyCheck.error)throw bodyCheck.error;
-
-  if((!logCheck.data || !logCheck.data.length) && logs.length){
-    const rows = logs.map(x=>({
-      user_id: currentUser.id,
-      workout_date: x.date,
-      workout_time: x.time || null,
-      exercise_name: x.exercise,
-      sets: x.sets
-    }));
-    const {error} = await db.from("workout_logs").insert(rows);
-    if(error)throw error;
-  }
-
-  if((!bodyCheck.data || !bodyCheck.data.length) && Object.keys(body).length){
-    const rows = Object.entries(body).map(([date,v])=>({
-      user_id: currentUser.id,
-      metric_date: date,
-      weight_kg: v?.weight==="" || v?.weight==null ? null : Number(v.weight),
-      body_fat_pct: v?.bodyFat==="" || v?.bodyFat==null ? null : Number(v.bodyFat)
-    })).filter(r=>r.weight_kg!==null || r.body_fat_pct!==null);
-    if(rows.length){
-      const {error} = await db.from("body_metrics").upsert(rows,{onConflict:"user_id,metric_date"});
-      if(error)throw error;
-    }
-  }
-}
-
 async function loadCloudState(){
   if(!currentUser)return;
   setSyncStatus("同期中",true);
   try{
     await migrateLocalIfCloudEmpty();
-    await migrateLocalWorkoutDataIfCloudEmpty();
-
-    const [exRes,menuRes,logRes,bodyRes]=await Promise.all([
+    const [exRes,menuRes]=await Promise.all([
       db.from("exercises").select("id,name,sort_order").eq("user_id",currentUser.id).order("sort_order",{ascending:true}),
-      db.from("workout_menus").select("id,name,exercise_ids,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:true}),
-      db.from("workout_logs").select("id,workout_date,workout_time,exercise_name,sets,created_at").eq("user_id",currentUser.id).order("workout_date",{ascending:true}).order("created_at",{ascending:true}),
-      db.from("body_metrics").select("id,metric_date,weight_kg,body_fat_pct").eq("user_id",currentUser.id).order("metric_date",{ascending:true})
+      db.from("workout_menus").select("id,name,exercise_ids,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:true})
     ]);
-
     if(exRes.error)throw exRes.error;
     if(menuRes.error)throw menuRes.error;
-    if(logRes.error)throw logRes.error;
-    if(bodyRes.error)throw bodyRes.error;
-
     cloudExerciseRows=exRes.data||[];
     cloudMenuRows=menuRes.data||[];
-    cloudWorkoutRows=logRes.data||[];
-    cloudBodyRows=bodyRes.data||[];
-
     exercises=cloudExerciseRows.map(r=>r.name);
     const nameById=Object.fromEntries(cloudExerciseRows.map(r=>[r.id,r.name]));
-    savedMenus=cloudMenuRows.map(r=>({
-      id:r.id,
-      name:r.name,
-      exerciseIds:r.exercise_ids||[],
-      exercises:(r.exercise_ids||[]).map(id=>nameById[id]).filter(Boolean)
-    }));
-
-    logs=cloudWorkoutRows.map(r=>({
-      id:r.id,
-      date:r.workout_date,
-      time:r.workout_time||"",
-      exercise:r.exercise_name,
-      sets:Array.isArray(r.sets)?r.sets:[]
-    }));
-
-    body={};
-    cloudBodyRows.forEach(r=>{
-      body[r.metric_date]={
-        id:r.id,
-        weight:r.weight_kg ?? "",
-        bodyFat:r.body_fat_pct ?? ""
-      };
-    });
-
+    savedMenus=cloudMenuRows.map(r=>({id:r.id,name:r.name,exerciseIds:r.exercise_ids||[],exercises:(r.exercise_ids||[]).map(id=>nameById[id]).filter(Boolean)}));
     saveLocal();
-    renderExercises();
-    renderMenuChoices();
-    renderSavedMenus();
-    loadTodayBody();
-    renderToday();
-    renderHistory();
-    checkWeeklyExport();
+    renderExercises();renderMenuChoices();renderSavedMenus();
     setSyncStatus("同期済み",true);
   }catch(e){
-    console.error(e);
-    setSyncStatus("同期エラー",false);
-    alert("クラウド同期エラー: "+e.message);
+    console.error(e); setSyncStatus("同期エラー",false); alert("クラウド同期エラー: "+e.message);
   }
 }
 
@@ -383,35 +303,6 @@ async function deleteExerciseCloud(id){
       if(me)throw me;
     }
   }
-}
-
-
-async function saveWorkoutCloud(log){
-  const payload={
-    user_id:currentUser.id,
-    workout_date:log.date,
-    workout_time:log.time||null,
-    exercise_name:log.exercise,
-    sets:log.sets
-  };
-  const {error}=await db.from("workout_logs").insert(payload);
-  if(error)throw error;
-}
-
-async function saveBodyCloud(date,weight,bodyFat){
-  if(weight==="" && bodyFat===""){
-    const {error}=await db.from("body_metrics").delete().eq("user_id",currentUser.id).eq("metric_date",date);
-    if(error)throw error;
-    return;
-  }
-  const payload={
-    user_id:currentUser.id,
-    metric_date:date,
-    weight_kg:weight===""?null:Number(weight),
-    body_fat_pct:bodyFat===""?null:Number(bodyFat)
-  };
-  const {error}=await db.from("body_metrics").upsert(payload,{onConflict:"user_id,metric_date"});
-  if(error)throw error;
 }
 
 function showCsvSaveInfo(filename){
@@ -543,74 +434,13 @@ $("saveMenu").addEventListener("click",async()=>{
   }catch(e){alert("メニュー保存エラー: "+e.message);}
 });
 
-$("saveBody").addEventListener("click",async()=>{
-  const w=$("bodyWeight").value, f=$("bodyFat").value, date=todayStr();
-  try{
-    if(currentUser){
-      await saveBodyCloud(date,w,f);
-      await loadCloudState();
-    }else{
-      if(w===""&&f==="")delete body[date];
-      else body[date]={weight:w===""?"":Number(w),bodyFat:f===""?"":Number(f)};
-      saveLocal();renderToday();renderHistory();checkWeeklyExport();
-    }
-    $("bodySaved").textContent="保存しました ✓";
-  }catch(e){
-    alert("体組成の保存エラー: "+e.message);
-  }
-});
-
-$("saveWorkout").addEventListener("click",async()=>{
-  const ex=$("exerciseSelect").value;
-  if(!ex){alert("種目を選んでください");return;}
-  const now=new Date();
-  const log={
-    date:todayStr(),
-    time:now.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
-    exercise:ex,
-    sets:currentSets.map(x=>({...x}))
-  };
-  try{
-    if(currentUser){
-      await saveWorkoutCloud(log);
-      await loadCloudState();
-    }else{
-      logs.push(log);
-      saveLocal();renderToday();renderHistory();updatePrevious();checkWeeklyExport();
-    }
-    const b=$("saveWorkout"),old=b.textContent;
-    b.textContent="記録しました ✓";
-    setTimeout(()=>b.textContent=old,900);
-  }catch(e){
-    alert("トレーニング記録の保存エラー: "+e.message);
-  }
-});
+$("saveBody").addEventListener("click",()=>{const w=$("bodyWeight").value,f=$("bodyFat").value;if(w===""&&f==="")delete body[todayStr()];else body[todayStr()]={weight:w===""?"":Number(w),bodyFat:f===""?"":Number(f)};saveLocal();$("bodySaved").textContent="保存しました ✓";renderToday();renderHistory();checkWeeklyExport();});
+$("saveWorkout").addEventListener("click",()=>{const ex=$("exerciseSelect").value;if(!ex){alert("種目を選んでください");return;}const now=new Date();logs.push({date:todayStr(),time:now.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),exercise:ex,sets:currentSets.map(x=>({...x}))});saveLocal();renderToday();renderHistory();updatePrevious();checkWeeklyExport();const b=$("saveWorkout"),old=b.textContent;b.textContent="記録しました ✓";setTimeout(()=>b.textContent=old,900);});
 
 $("weeklyExportButton").addEventListener("click",()=>{const c=$("weeklyExportCard");if(c.dataset.start)exportWeek(new Date(c.dataset.start+"T00:00:00"),new Date(c.dataset.end+"T00:00:00"));});
 $("weeklyExportDismiss").addEventListener("click",()=>{$("weeklyExportCard").style.display="none";});
 $("exportCsv").addEventListener("click",()=>{const rows=[["date","body_weight_kg","body_fat_pct","exercise","set_no","training_weight_kg","reps"]];logs.forEach(log=>{const bd=body[log.date]||{};log.sets.forEach((s,i)=>rows.push([log.date,bd.weight??"",bd.bodyFat??"",log.exercise,i+1,s.weight,s.reps]));});if(rows.length===1){alert("記録がありません。");return;}downloadCsv(rows,`workout_all_${todayStr()}.csv`);});
-$("clearAll").addEventListener("click",async()=>{
-  const msg=currentUser
-    ?"クラウド上を含め、トレーニング記録・体重・体脂肪率をすべて削除しますか？"
-    :"端末内のトレーニング記録・体重・体脂肪率を削除しますか？";
-  if(!confirm(msg))return;
-  try{
-    if(currentUser){
-      const [a,b]=await Promise.all([
-        db.from("workout_logs").delete().eq("user_id",currentUser.id),
-        db.from("body_metrics").delete().eq("user_id",currentUser.id)
-      ]);
-      if(a.error)throw a.error;
-      if(b.error)throw b.error;
-      await loadCloudState();
-    }else{
-      logs=[];body={};weeklyExports={};saveLocal();renderToday();renderHistory();loadTodayBody();updatePrevious();checkWeeklyExport();
-    }
-  }catch(e){
-    alert("削除エラー: "+e.message);
-  }
-});
-
+$("clearAll").addEventListener("click",()=>{if(confirm("端末内のトレーニング記録・体重・体脂肪率を削除しますか？")){logs=[];body={};weeklyExports={};saveLocal();renderToday();renderHistory();loadTodayBody();updatePrevious();checkWeeklyExport();}});
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>switchView(btn.dataset.view)));
 
 db.auth.getSession().then(async ({data})=>{currentUser=data.session?.user||null;await ensureAuthUI();if(currentUser)await loadCloudState();});
